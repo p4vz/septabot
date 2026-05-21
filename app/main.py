@@ -1,22 +1,26 @@
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
-from app.routes import commute, septa, telegram, traffic, weather
+from app.routes import commute, septa, telegram, traffic, ui, weather
 
 
-STATIC_DIR = Path(__file__).parent / "static"
+BASE_DIR = Path(__file__).parent
+STATIC_DIR = BASE_DIR / "static"
+TEMPLATES_DIR = BASE_DIR / "templates"
+TEMPLATES = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 app = FastAPI(
     title="septabot backend",
     description=(
         "Backend API for a Philadelphia commuter bot. Aggregates SEPTA service alerts, "
         "regional rail train delays, bus detours, NWS weather, and 511PA traffic events. "
-        "Includes a static dashboard at / and a Telegram webhook handler at /telegram/webhook."
+        "Includes a Jinja+HTMX dashboard at / and JSON endpoints for downstream agents."
     ),
-    version="0.2.0",
+    version="0.3.0",
 )
 
 
@@ -30,10 +34,11 @@ app.include_router(weather.router)
 app.include_router(traffic.router)
 app.include_router(commute.router)
 app.include_router(telegram.router)
+app.include_router(ui.router)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
-@app.get("/", include_in_schema=False)
-async def dashboard() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+@app.get("/", include_in_schema=False, response_class=HTMLResponse)
+async def dashboard(request: Request) -> HTMLResponse:
+    return TEMPLATES.TemplateResponse(request, "dashboard.html")

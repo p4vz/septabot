@@ -15,13 +15,14 @@ async def test_dashboard_served_at_root():
         r = await c.get("/")
     assert r.status_code == 200
     assert "<title>septabot" in r.text
+    # HTMX is wired up and the cards declare their refresh endpoints.
+    assert "htmx.org" in r.text
+    assert 'hx-get="/ui/weather"' in r.text
 
 
-async def test_static_assets():
+async def test_static_style():
     async with _client() as c:
-        js = await c.get("/static/app.js")
         css = await c.get("/static/style.css")
-    assert js.status_code == 200
     assert css.status_code == 200
 
 
