@@ -18,5 +18,16 @@ class Settings(BaseSettings):
 
     http_timeout: float = 10.0
 
+    # Telegram bot
+    telegram_bot_token: str = ""
+    telegram_webhook_secret: str = ""
+
+    # Hermes (OpenAI-compatible inference endpoint, e.g. self-hosted on Railway)
+    hermes_base_url: str = ""
+    hermes_api_key: str = ""
+    hermes_model: str = "hermes-3-llama-3.1-8b"
+    hermes_max_tokens: int = 220
+    hermes_temperature: float = 0.3
+
 
 settings = Settings()

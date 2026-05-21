@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>septabot — Philly commuter dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body class="bg-slate-950 text-slate-100 min-h-screen">
+    <header class="border-b border-slate-800">
+      <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight">septabot</h1>
+          <p class="text-xs text-slate-400">SEPTA · Weather · Traffic — Philadelphia</p>
+        </div>
+        <div class="text-right text-xs text-slate-400">
+          <div>Updated <span id="updated">—</span></div>
+          <button id="refresh" class="mt-1 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">Refresh</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <section class="bg-slate-900 rounded-lg p-4 shadow ring-1 ring-slate-800">
+        <h2 class="font-semibold text-sky-300">Weather</h2>
+        <div id="weather" class="mt-3 text-sm text-slate-300">Loading…</div>
+      </section>
+
+      <section class="bg-slate-900 rounded-lg p-4 shadow ring-1 ring-slate-800">
+        <h2 class="font-semibold text-amber-300">SEPTA Alerts</h2>
+        <div id="alerts" class="mt-3 text-sm text-slate-300">Loading…</div>
+      </section>
+
+      <section class="bg-slate-900 rounded-lg p-4 shadow ring-1 ring-slate-800">
+        <h2 class="font-semibold text-emerald-300">Delayed Trains</h2>
+        <div id="trains" class="mt-3 text-sm text-slate-300">Loading…</div>
+      </section>
+
+      <section class="bg-slate-900 rounded-lg p-4 shadow ring-1 ring-slate-800">
+        <h2 class="font-semibold text-fuchsia-300">Bus Detours</h2>
+        <div id="detours" class="mt-3 text-sm text-slate-300">Loading…</div>
+      </section>
+
+      <section class="bg-slate-900 rounded-lg p-4 shadow ring-1 ring-slate-800 md:col-span-2">
+        <h2 class="font-semibold text-rose-300">Traffic</h2>
+        <div id="traffic" class="mt-3 text-sm text-slate-300">Loading…</div>
+      </section>
+    </main>
+
+    <footer class="max-w-6xl mx-auto px-4 py-6 text-xs text-slate-500">
+      Data: SEPTA Open Data · NWS api.weather.gov · 511PA
+    </footer>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
