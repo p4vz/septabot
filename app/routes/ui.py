@@ -28,9 +28,9 @@ async def weather_card(request: Request, lat: float | None = None, lon: float | 
     ctx: dict = {"weather": None, "error": None}
     try:
         ctx["weather"] = await cache.get_or_set(
-            f"weather:{lat:.3f}:{lon:.3f}:False",
+            f"weather:{lat:.3f}:{lon:.3f}:True",
             settings.cache_ttl_weather,
-            lambda: weather_client.fetch_forecast(lat, lon),
+            lambda: weather_client.fetch_forecast(lat, lon, hourly=True),
         )
     except Exception as e:
         ctx["error"] = f"weather unavailable ({type(e).__name__})"

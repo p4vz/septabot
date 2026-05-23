@@ -1,5 +1,20 @@
 <details open class="bg-slate-900 rounded-lg shadow ring-1 ring-slate-800 md:col-span-2 lg:col-span-3 card">
   <summary class="cursor-pointer p-4 flex items-center justify-between">
+    <h2 class="font-semibold text-sky-300">Weather — hourly</h2>
+    <span class="text-slate-500 text-xs chev">&#9662;</span>
+  </summary>
+  <div
+    class="px-4 pb-4"
+    hx-get="/ui/weather"
+    hx-trigger="load, every 60s, refresh-all from:body"
+    hx-swap="innerHTML"
+  >
+    <div class="text-sm text-slate-400">Loading…</div>
+  </div>
+</details>
+
+<details open class="bg-slate-900 rounded-lg shadow ring-1 ring-slate-800 md:col-span-2 lg:col-span-3 card">
+  <summary class="cursor-pointer p-4 flex items-center justify-between">
     <h2 class="font-semibold text-orange-300">Line Disruptions</h2>
     <span class="text-slate-500 text-xs chev">&#9662;</span>
   </summary>
@@ -58,22 +73,7 @@
   </div>
 </details>
 
-<details open class="bg-slate-900 rounded-lg shadow ring-1 ring-slate-800 card">
-  <summary class="cursor-pointer p-4 flex items-center justify-between">
-    <h2 class="font-semibold text-sky-300">Weather</h2>
-    <span class="text-slate-500 text-xs chev">&#9662;</span>
-  </summary>
-  <div
-    class="px-4 pb-4"
-    hx-get="/ui/weather"
-    hx-trigger="load, every 60s, refresh-all from:body"
-    hx-swap="innerHTML"
-  >
-    <div class="text-sm text-slate-400">Loading…</div>
-  </div>
-</details>
-
-<details open class="bg-slate-900 rounded-lg shadow ring-1 ring-slate-800 md:col-span-2 card">
+<details open class="bg-slate-900 rounded-lg shadow ring-1 ring-slate-800 md:col-span-2 lg:col-span-3 card">
   <summary class="cursor-pointer p-4 flex items-center justify-between">
     <h2 class="font-semibold text-rose-300">Traffic</h2>
     <span class="text-slate-500 text-xs chev">&#9662;</span>

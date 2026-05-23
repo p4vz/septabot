@@ -23,16 +23,16 @@ async def test_weather_card_renders():
             },
         )
     )
-    respx.get("https://api.weather.gov/x/forecast").mock(
+    respx.get("https://api.weather.gov/x/hourly").mock(
         return_value=Response(
             200,
             json={
                 "properties": {
                     "periods": [
                         {
-                            "name": "This Afternoon",
+                            "name": "",
                             "startTime": "2026-05-21T13:00:00-04:00",
-                            "endTime": "2026-05-21T18:00:00-04:00",
+                            "endTime": "2026-05-21T14:00:00-04:00",
                             "temperature": 77,
                             "temperatureUnit": "F",
                             "windSpeed": "9 mph",
@@ -40,7 +40,19 @@ async def test_weather_card_renders():
                             "shortForecast": "Mostly Sunny",
                             "detailedForecast": "",
                             "probabilityOfPrecipitation": {"value": 5},
-                        }
+                        },
+                        {
+                            "name": "",
+                            "startTime": "2026-05-21T14:00:00-04:00",
+                            "endTime": "2026-05-21T15:00:00-04:00",
+                            "temperature": 78,
+                            "temperatureUnit": "F",
+                            "windSpeed": "10 mph",
+                            "windDirection": "W",
+                            "shortForecast": "Mostly Sunny",
+                            "detailedForecast": "",
+                            "probabilityOfPrecipitation": {"value": 10},
+                        },
                     ]
                 }
             },
@@ -52,6 +64,8 @@ async def test_weather_card_renders():
     assert r.status_code == 200
     assert "Mostly Sunny" in r.text
     assert "77°F" in r.text
+    # hourly row present
+    assert "78°" in r.text
 
 
 @respx.mock

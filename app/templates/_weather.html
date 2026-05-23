@@ -1,21 +1,28 @@
 {% if weather and weather.current %}
   {% set c = weather.current %}
-  <div>
+  <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
     <div class="text-lg font-semibold text-slate-100">
-      {{ c.temperature }}°{{ c.temperature_unit }} · {{ c.short_forecast }}
+      Now {{ c.temperature }}°{{ c.temperature_unit }} · {{ c.short_forecast }}
     </div>
     <div class="text-xs text-slate-400">
-      {{ c.name }} · wind {{ c.wind }}{% if c.precipitation_probability %} · {{ c.precipitation_probability }}% precip{% endif %}
+      wind {{ c.wind }}{% if c.precipitation_probability %} · {{ c.precipitation_probability }}% precip{% endif %}
+      {% if weather.location.city %} · {{ weather.location.city }}, {{ weather.location.state }}{% endif %}
     </div>
   </div>
-  {% for p in weather.upcoming[:3] %}
-    <div class="mt-2 flex justify-between text-xs">
-      <span class="text-slate-300">{{ p.name }}</span>
-      <span class="text-slate-400">
-        {{ p.temperature }}° {{ p.short_forecast }}{% if p.precipitation_probability %} · {{ p.precipitation_probability }}%{% endif %}
-      </span>
+  {% if weather.upcoming %}
+    <div class="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-2">
+      {% for p in weather.upcoming[:5] %}
+        <div class="bg-slate-800/60 rounded p-2 text-center">
+          <div class="text-xs text-slate-400">{{ p.start_time.strftime('%-I %p') }}</div>
+          <div class="text-sm font-semibold text-slate-100 mt-0.5">{{ p.temperature }}°</div>
+          <div class="text-xs text-slate-300 truncate" title="{{ p.short_forecast }}">{{ p.short_forecast }}</div>
+          {% if p.precipitation_probability %}
+            <div class="text-xs text-sky-300 mt-0.5">{{ p.precipitation_probability }}%</div>
+          {% endif %}
+        </div>
+      {% endfor %}
     </div>
-  {% endfor %}
+  {% endif %}
 {% else %}
   <div class="text-sm text-slate-500">{{ error or "No data" }}</div>
 {% endif %}
