@@ -18,7 +18,7 @@ async def test_health():
 
 @respx.mock
 async def test_septa_alerts_filtered_by_mode():
-    respx.get("https://www3.septa.org/api/Alerts/index.php").mock(
+    respx.get("https://www3.septa.org/api/Alerts/get_alert_data.php").mock(
         return_value=Response(
             200,
             json=[
@@ -48,6 +48,65 @@ async def test_septa_alerts_filtered_by_mode():
     data = r.json()
     assert len(data) == 1
     assert data[0]["route_id"] == "MFL"
+
+
+@respx.mock
+async def test_septa_alerts_picks_up_verbose_message_fields():
+    """The verbose endpoint uses fields like `description` and `descriptiontext`
+    instead of `current_message`. Make sure they flow through to the dashboard.
+    Also verify HTML in alert bodies is stripped (SEPTA sometimes wraps text in <p>)."""
+    respx.get("https://www3.septa.org/api/Alerts/get_alert_data.php").mock(
+        return_value=Response(
+            200,
+            json=[
+                {
+                    "route_id": "rr_paoli",
+                    "route_name": "Paoli/Thorndale",
+                    "mode": "Rail",
+                    "description": "<p>Train 532 is operating <b>25 minutes late</b>.</p>",
+                    "advisory": "Single-tracking near Strafford until 7 PM.",
+                    "last_updated": "2026-05-23 17:00:00",
+                },
+            ],
+        )
+    )
+    async with _client() as c:
+        r = await c.get("/septa/alerts")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["current_message"] == "Train 532 is operating  25 minutes late ."
+    assert data[0]["advisory_message"] == "Single-tracking near Strafford until 7 PM."
+
+
+@respx.mock
+async def test_septa_alerts_falls_back_to_thin_endpoint_on_error():
+    """If get_alert_data.php errors (5xx, malformed JSON), use index.php so
+    the dashboard still shows *something* even if message bodies are missing."""
+    respx.get("https://www3.septa.org/api/Alerts/get_alert_data.php").mock(
+        return_value=Response(500, text="Internal Server Error")
+    )
+    respx.get("https://www3.septa.org/api/Alerts/index.php").mock(
+        return_value=Response(
+            200,
+            json=[
+                {
+                    "route_id": "PAO",
+                    "route_name": "Paoli/Thorndale",
+                    "mode": "Rail",
+                    "current_message": "",
+                    "advisory_message": "",
+                    "last_updated": "2026-05-23 17:00:00",
+                }
+            ],
+        )
+    )
+    async with _client() as c:
+        r = await c.get("/septa/alerts")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["route_id"] == "PAO"
 
 
 @respx.mock
@@ -153,7 +212,7 @@ async def test_traffic_empty_without_key():
 
 @respx.mock
 async def test_commute_aggregates():
-    respx.get("https://www3.septa.org/api/Alerts/index.php").mock(
+    respx.get("https://www3.septa.org/api/Alerts/get_alert_data.php").mock(
         return_value=Response(200, json=[])
     )
     respx.get("https://www3.septa.org/api/TrainView/index.php").mock(

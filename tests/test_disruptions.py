@@ -134,7 +134,7 @@ async def test_disruptions_endpoint_end_to_end():
             ],
         )
     )
-    respx.get("https://www3.septa.org/api/Alerts/index.php").mock(
+    respx.get("https://www3.septa.org/api/Alerts/get_alert_data.php").mock(
         return_value=Response(
             200,
             json=[
@@ -305,7 +305,7 @@ async def test_disruptions_endpoint_direction_filter():
             ],
         )
     )
-    respx.get("https://www3.septa.org/api/Alerts/index.php").mock(
+    respx.get("https://www3.septa.org/api/Alerts/get_alert_data.php").mock(
         return_value=Response(200, json=[])
     )
 

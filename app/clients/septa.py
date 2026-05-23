@@ -40,20 +40,94 @@ def _parse_dt(value: Optional[str]) -> Optional[datetime]:
 
 
 async def fetch_alerts() -> list[Alert]:
-    data = await _get_json("/Alerts/index.php")
+    """Fetch SEPTA service alerts.
+
+    SEPTA exposes two alerts endpoints. /Alerts/index.php returns a thin
+    summary (route + flags) where the message-body fields are usually
+    empty. /Alerts/get_alert_data.php?req1=all_alerts returns the verbose
+    bodies that show up in the SEPTA mobile app. We use the verbose one
+    and fall back to the thin one only if it errors, so we always have
+    *something* to display.
+
+    Field names vary between modes (rail vs. bus vs. detour-only items),
+    so we look for any of: current_message, advisory_message,
+    description, descriptiontext, message, detour_message.
+    """
+    raw_items: list[dict] = []
+    try:
+        verbose = await _get_json(
+            "/Alerts/get_alert_data.php", params={"req1": "all_alerts"}
+        )
+        raw_items = _flatten_alert_payload(verbose)
+    except (httpx.HTTPError, ValueError):
+        # Only fall back if the verbose endpoint genuinely failed — an empty
+        # response from it is a valid "no active alerts" answer.
+        thin = await _get_json("/Alerts/index.php")
+        raw_items = list(thin or [])
+
     alerts: list[Alert] = []
-    for raw in data or []:
+    for raw in raw_items:
+        current = _first_nonempty(
+            raw, "current_message", "description", "descriptiontext", "message"
+        )
+        advisory = _first_nonempty(raw, "advisory_message", "advisory")
+        detour = _first_nonempty(raw, "detour_message", "detour")
+        # If the advisory slot is empty but a detour body exists, surface it
+        # there so the dashboard's "advisory" line renders the detour text.
+        if not advisory and detour:
+            advisory = detour
         alerts.append(
             Alert(
-                route_id=str(raw.get("route_id", "")),
-                route_name=str(raw.get("route_name", "")),
-                mode=str(raw.get("mode", "")),
-                current_message=(raw.get("current_message") or "").strip(),
-                advisory_message=(raw.get("advisory_message") or "").strip(),
-                last_updated=_parse_dt(raw.get("last_updated")),
+                route_id=str(raw.get("route_id") or raw.get("routeid") or ""),
+                route_name=str(raw.get("route_name") or raw.get("routename") or ""),
+                mode=str(raw.get("mode") or raw.get("route_type") or ""),
+                current_message=current,
+                advisory_message=advisory,
+                last_updated=_parse_dt(raw.get("last_updated") or raw.get("ts")),
             )
         )
     return alerts
+
+
+def _first_nonempty(raw: dict, *keys: str) -> str:
+    """Return the first non-empty string value among `keys`, HTML-stripped."""
+    for key in keys:
+        val = raw.get(key)
+        if isinstance(val, str) and val.strip():
+            return _strip_html(val).strip()
+    return ""
+
+
+_HTML_TAG_RE = __import__("re").compile(r"<[^>]+>")
+
+
+def _strip_html(s: str) -> str:
+    import html as _html
+    return _html.unescape(_HTML_TAG_RE.sub(" ", s))
+
+
+def _flatten_alert_payload(payload: Any) -> list[dict]:
+    """Normalise SEPTA's get_alert_data.php shape to a flat list of dicts.
+
+    The endpoint has historically returned either a top-level list or a
+    dict keyed by route_id whose values are alert objects (or lists of
+    them). Accept both.
+    """
+    if isinstance(payload, list):
+        return [x for x in payload if isinstance(x, dict)]
+    if isinstance(payload, dict):
+        out: list[dict] = []
+        for key, val in payload.items():
+            if isinstance(val, dict):
+                val.setdefault("route_id", key)
+                out.append(val)
+            elif isinstance(val, list):
+                for item in val:
+                    if isinstance(item, dict):
+                        item.setdefault("route_id", key)
+                        out.append(item)
+        return out
+    return []
 
 
 async def fetch_trains() -> list[Train]:

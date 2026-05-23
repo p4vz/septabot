@@ -122,7 +122,7 @@ async def test_disruptions_card_renders_rollup():
             ],
         )
     )
-    respx.get("https://www3.septa.org/api/Alerts/index.php").mock(
+    respx.get("https://www3.septa.org/api/Alerts/get_alert_data.php").mock(
         return_value=Response(
             200,
             json=[

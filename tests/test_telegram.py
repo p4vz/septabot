@@ -53,7 +53,7 @@ async def test_telegram_webhook_help_no_hermes_call():
 
 @respx.mock
 async def test_telegram_status_command_uses_backend_no_hermes():
-    respx.get("https://www3.septa.org/api/Alerts/index.php").mock(
+    respx.get("https://www3.septa.org/api/Alerts/get_alert_data.php").mock(
         return_value=Response(
             200,
             json=[
