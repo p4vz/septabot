@@ -193,3 +193,45 @@ class DisruptionReport(BaseModel):
     total_trains: int
     total_stuck: int
     lines: list[LineDisruption] = Field(default_factory=list)
+
+
+class RouteStep(BaseModel):
+    """A single step within a route leg (walk a block, take a train, etc.)."""
+
+    mode: str = ""  # WALKING, TRANSIT, DRIVING, BICYCLING
+    instruction: str = ""
+    distance_meters: int = 0
+    duration_seconds: int = 0
+    # Populated only when mode == TRANSIT
+    transit_line: Optional[str] = None
+    transit_short_name: Optional[str] = None
+    transit_vehicle: Optional[str] = None
+    transit_headsign: Optional[str] = None
+    transit_num_stops: Optional[int] = None
+    departure_stop: Optional[str] = None
+    arrival_stop: Optional[str] = None
+    departure_time: Optional[str] = None
+    arrival_time: Optional[str] = None
+
+
+class RouteLeg(BaseModel):
+    start_address: str = ""
+    end_address: str = ""
+    distance_meters: int = 0
+    duration_seconds: int = 0
+    duration_in_traffic_seconds: Optional[int] = None
+    departure_time: Optional[str] = None
+    arrival_time: Optional[str] = None
+    steps: list[RouteStep] = Field(default_factory=list)
+
+
+class RouteResult(BaseModel):
+    mode: str  # "driving" or "transit"
+    summary: str = ""
+    warnings: list[str] = Field(default_factory=list)
+    legs: list[RouteLeg] = Field(default_factory=list)
+    total_distance_meters: int = 0
+    total_duration_seconds: int = 0
+    total_duration_in_traffic_seconds: Optional[int] = None
+    polyline: Optional[str] = None
+    fare: Optional[dict] = None

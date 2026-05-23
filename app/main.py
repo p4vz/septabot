@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.routes import commute, septa, telegram, traffic, ui, weather
+from app.routes import commute, route, septa, telegram, traffic, ui, weather
 
 
 BASE_DIR = Path(__file__).parent
@@ -32,6 +32,7 @@ async def health() -> dict:
 app.include_router(septa.router)
 app.include_router(weather.router)
 app.include_router(traffic.router)
+app.include_router(route.router)
 app.include_router(commute.router)
 app.include_router(telegram.router)
 app.include_router(ui.router)

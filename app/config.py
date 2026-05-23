@@ -29,5 +29,10 @@ class Settings(BaseSettings):
     hermes_max_tokens: int = 220
     hermes_temperature: float = 0.3
 
+    # Google Maps Platform — used by /route/drive (traffic-aware ETA) and
+    # /route/transit (SEPTA-aware door-to-door). Without this both endpoints
+    # return 502; the rest of the app continues to work.
+    google_maps_api_key: str = ""
+
 
 settings = Settings()
