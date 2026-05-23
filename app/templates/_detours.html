@@ -1,16 +1,28 @@
-<h2 class="font-semibold text-fuchsia-300">Bus Detours</h2>
 {% if detours %}
-  <div class="mt-3 space-y-2">
+  <div class="space-y-1">
     {% for d in detours %}
-      <div class="pb-2 border-b border-slate-800 last:border-b-0">
-        <div class="text-xs font-semibold text-fuchsia-200">Route {{ d.route_id }}</div>
-        <div class="text-xs text-slate-300">{{ d.reason or d.current_message }}</div>
-        {% if d.start_location or d.end_location %}
-          <div class="text-xs text-slate-500">{{ d.start_location }} → {{ d.end_location }}</div>
-        {% endif %}
-      </div>
+      <details class="border-b border-slate-800 last:border-b-0 py-1.5">
+        <summary class="cursor-pointer flex items-baseline justify-between gap-2">
+          <span class="text-xs font-semibold text-fuchsia-200 shrink-0">Route {{ d.route_id }}</span>
+          <span class="text-xs text-slate-300 truncate">{{ d.reason or d.current_message or "Detour" }}</span>
+        </summary>
+        <div class="mt-1.5 text-xs space-y-1">
+          {% if d.route_name and d.route_name != d.route_id %}
+            <div class="text-slate-400">{{ d.route_name }}</div>
+          {% endif %}
+          {% if d.start_location or d.end_location %}
+            <div class="text-slate-300">{{ d.start_location }} → {{ d.end_location }}</div>
+          {% endif %}
+          {% if d.current_message %}
+            <div class="text-slate-200">{{ d.current_message }}</div>
+          {% endif %}
+          {% if d.start_date or d.end_date %}
+            <div class="text-slate-500">{{ d.start_date }} — {{ d.end_date }}</div>
+          {% endif %}
+        </div>
+      </details>
     {% endfor %}
   </div>
 {% else %}
-  <div class="mt-3 text-sm text-slate-500">{{ error or "No detours" }}</div>
+  <div class="text-sm text-slate-500">{{ error or "No detours" }}</div>
 {% endif %}

@@ -1,7 +1,6 @@
-<h2 class="font-semibold text-sky-300">Weather</h2>
 {% if weather and weather.current %}
   {% set c = weather.current %}
-  <div class="mt-3">
+  <div>
     <div class="text-lg font-semibold text-slate-100">
       {{ c.temperature }}°{{ c.temperature_unit }} · {{ c.short_forecast }}
     </div>
@@ -18,5 +17,5 @@
     </div>
   {% endfor %}
 {% else %}
-  <div class="mt-3 text-sm text-slate-500">{{ error or "No data" }}</div>
+  <div class="text-sm text-slate-500">{{ error or "No data" }}</div>
 {% endif %}

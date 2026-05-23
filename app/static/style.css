@@ -1,2 +1,10 @@
 /* Reserved for overrides; Tailwind CDN handles the rest. */
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* Hide the default disclosure triangle so we can use our own chevron. */
+summary { list-style: none; }
+summary::-webkit-details-marker { display: none; }
+
+/* Rotate the chevron when the <details> is open. */
+.chev { display: inline-block; transition: transform 0.15s ease; }
+details[open] > summary .chev { transform: rotate(180deg); }
