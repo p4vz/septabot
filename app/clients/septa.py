@@ -18,7 +18,8 @@ SEPTA_BASE = "https://www3.septa.org/api"
 
 
 async def _get_json(path: str, params: Optional[dict] = None) -> Any:
-    async with httpx.AsyncClient(timeout=settings.http_timeout) as client:
+    headers = {"User-Agent": settings.nws_user_agent, "Accept": "application/json"}
+    async with httpx.AsyncClient(timeout=settings.http_timeout, headers=headers) as client:
         r = await client.get(f"{SEPTA_BASE}{path}", params=params)
         r.raise_for_status()
         return r.json()

@@ -6,9 +6,11 @@ from app.cache import cache
 from app.clients import septa as septa_client
 from app.config import settings
 from app.data.stations import nearest_stations, search_stations
+from app.inference import build_disruption_report
 from app.models import (
     Alert,
     BusDetour,
+    DisruptionReport,
     NextToArriveOption,
     Station,
     StationArrivals,
@@ -83,6 +85,37 @@ async def get_next_to_arrive(
         settings.cache_ttl_trains,
         lambda: septa_client.fetch_next_to_arrive(origin, destination, results),
     )
+
+
+@router.get("/disruptions", response_model=DisruptionReport)
+async def get_disruptions(
+    min_late: int = Query(default=10, ge=1, le=180, description="Threshold for 'stuck' in minutes"),
+    line: Optional[str] = Query(default=None, description="Filter to a single line"),
+    direction: Optional[str] = Query(
+        default=None, description="Filter to 'inbound' or 'outbound'"
+    ),
+):
+    """Rollup of stuck trains by line, bottleneck (next-stop + direction), and
+    matching service alerts. This is the endpoint Hermes should call to decide
+    whether to recommend or warn against a route."""
+    trains = await cache.get_or_set(
+        "septa:trains", settings.cache_ttl_trains, septa_client.fetch_trains
+    )
+    alerts = await cache.get_or_set(
+        "septa:alerts", settings.cache_ttl_alerts, septa_client.fetch_alerts
+    )
+
+    report = build_disruption_report(trains, alerts, threshold_minutes=min_late)
+
+    if line:
+        line_l = line.lower()
+        report.lines = [ld for ld in report.lines if ld.line.lower() == line_l]
+    if direction in ("inbound", "outbound"):
+        for ld in report.lines:
+            ld.bottlenecks = [b for b in ld.bottlenecks if b.direction == direction]
+        report.lines = [ld for ld in report.lines if ld.bottlenecks]
+
+    return report
 
 
 @router.get("/stations", response_model=list[Station])

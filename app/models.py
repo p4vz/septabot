@@ -1,7 +1,34 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+CENTER_CITY_STATIONS = {
+    "30th street station",
+    "30th street",
+    "suburban station",
+    "suburban",
+    "jefferson station",
+    "jefferson",
+    "market east",
+    "temple university",
+    "temple u",
+}
+
+
+def infer_direction(destination: str) -> str:
+    """Inbound = heading toward Center City. Outbound = heading away.
+
+    Regional Rail through-routes via Center City, so this reflects the final
+    destination as listed by SEPTA, not necessarily the train's current leg.
+    """
+    if not destination:
+        return "unknown"
+    d = destination.strip().lower()
+    if d in CENTER_CITY_STATIONS or any(cc in d for cc in CENTER_CITY_STATIONS):
+        return "inbound"
+    return "outbound"
 
 
 class Alert(BaseModel):
@@ -26,6 +53,13 @@ class Train(BaseModel):
     lon: float = 0.0
     service: str = ""
     source: str = Field(validation_alias="SOURCE", default="")
+    direction: str = "unknown"
+
+    @model_validator(mode="after")
+    def _infer_direction(self):
+        if self.direction == "unknown":
+            self.direction = infer_direction(self.destination)
+        return self
 
 
 class BusDetour(BaseModel):
@@ -129,3 +163,33 @@ class CommuteSnapshot(BaseModel):
     bus_detours: list[BusDetour] = Field(default_factory=list)
     traffic_events: list[TrafficEvent] = Field(default_factory=list)
     errors: dict[str, str] = Field(default_factory=dict)
+
+
+class Bottleneck(BaseModel):
+    """A cluster of stuck trains sharing the same upcoming station + direction."""
+
+    next_stop: str
+    direction: str
+    train_count: int
+    max_late_minutes: int
+    trains: list[Train] = Field(default_factory=list)
+
+
+class LineDisruption(BaseModel):
+    """All stuck trains and matching alerts on a single Regional Rail line."""
+
+    line: str
+    stuck_count: int
+    max_late_minutes: int
+    inbound_stuck: int = 0
+    outbound_stuck: int = 0
+    bottlenecks: list[Bottleneck] = Field(default_factory=list)
+    alerts: list[Alert] = Field(default_factory=list)
+
+
+class DisruptionReport(BaseModel):
+    timestamp: datetime
+    threshold_minutes: int
+    total_trains: int
+    total_stuck: int
+    lines: list[LineDisruption] = Field(default_factory=list)
