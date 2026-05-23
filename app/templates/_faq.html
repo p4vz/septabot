@@ -1,0 +1,69 @@
+{# FAQ modal — opened from the header. Closes on backdrop click or Esc. #}
+<dialog
+  id="faq-modal"
+  class="bg-slate-900 text-slate-100 rounded-lg p-0 max-w-2xl w-[92vw] backdrop:bg-black/70 open:flex open:flex-col max-h-[85vh] border border-slate-700 shadow-2xl"
+  onclick="if (event.target === this) this.close()"
+>
+  <div class="flex items-center justify-between px-5 py-3 border-b border-slate-800 sticky top-0 bg-slate-900 rounded-t-lg">
+    <h2 class="text-lg font-semibold">What can septabot do?</h2>
+    <button
+      class="text-slate-400 hover:text-slate-100 text-xl leading-none px-2"
+      onclick="document.getElementById('faq-modal').close()"
+      aria-label="Close"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="px-5 py-4 overflow-y-auto space-y-5 text-sm">
+    <p class="text-slate-300">
+      Ask the Telegram bot anything about your Philly commute. It pulls
+      live data from SEPTA, NWS, 511PA, and Google Maps, then a small LLM
+      writes a short answer with a recommendation.
+    </p>
+
+    <section>
+      <h3 class="text-emerald-400 font-semibold mb-2">It can</h3>
+      <ul class="list-disc list-inside space-y-1 text-slate-200 marker:text-slate-500">
+        <li>Report Regional Rail delays and stuck trains, line by line</li>
+        <li>Show next-to-arrive trains at any SEPTA station</li>
+        <li>Surface SEPTA service alerts and bus/trolley detours</li>
+        <li>Give the Philly weather forecast and active NWS alerts</li>
+        <li>List 511PA traffic incidents (crashes, closures, construction) in the region</li>
+        <li>Driving directions with live traffic via Google Maps</li>
+        <li>SEPTA-aware door-to-door transit routes (walk + bus/train + walk, with fares)</li>
+        <li>Compare driving vs. transit for a given trip and recommend one</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3 class="text-rose-400 font-semibold mb-2">It can't</h3>
+      <ul class="list-disc list-inside space-y-1 text-slate-200 marker:text-slate-500">
+        <li>Buy tickets or reload your SEPTA Key</li>
+        <li>Show live bus/trolley positions on a map (schedules and detours only)</li>
+        <li>Predict future delays — it only reports the current state</li>
+        <li>Plan trips outside the Philadelphia region</li>
+        <li>Send proactive push notifications — it replies when you ask</li>
+        <li>Handle Amtrak, NJ Transit, or PATCO as first-class — Google may route through them, but SEPTA is the focus</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3 class="text-sky-400 font-semibold mb-2">Try asking</h3>
+      <ul class="space-y-1.5 text-slate-200">
+        <li class="bg-slate-800/60 rounded px-3 py-1.5">&ldquo;How's the Paoli/Thorndale line right now?&rdquo;</li>
+        <li class="bg-slate-800/60 rounded px-3 py-1.5">&ldquo;Should I drive or take the train from Wayne to Center City?&rdquo;</li>
+        <li class="bg-slate-800/60 rounded px-3 py-1.5">&ldquo;Next train from Suburban Station to the airport?&rdquo;</li>
+        <li class="bg-slate-800/60 rounded px-3 py-1.5">&ldquo;Any crashes on the Schuylkill heading west?&rdquo;</li>
+        <li class="bg-slate-800/60 rounded px-3 py-1.5">&ldquo;Weather for my walk home in an hour?&rdquo;</li>
+        <li class="bg-slate-800/60 rounded px-3 py-1.5">&ldquo;Are there any bus detours near Temple right now?&rdquo;</li>
+        <li class="bg-slate-800/60 rounded px-3 py-1.5">&ldquo;Quickest way from 30th Street Station to Fishtown tonight?&rdquo;</li>
+      </ul>
+    </section>
+
+    <section class="text-xs text-slate-400 pt-1">
+      Data sources: SEPTA Open Data · NWS api.weather.gov · 511PA · Google Maps Platform.
+      All data is fetched live and cached for a few minutes.
+    </section>
+  </div>
+</dialog>
