@@ -2,7 +2,7 @@
 import respx
 from httpx import ASGITransport, AsyncClient, Response
 
-from app.inference import build_disruption_report
+from app.inference import _alert_matches_line, build_disruption_report, infer_train_direction
 from app.main import app
 from app.models import Alert, Train
 
@@ -11,7 +11,7 @@ def _client() -> AsyncClient:
     return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 
 
-def _train(num, line, dest, next_stop, late, **kw) -> Train:
+def _train(num, line, dest, next_stop, late, *, lat="0", lon="0", **kw) -> Train:
     return Train.model_validate(
         {
             "trainno": num,
@@ -20,8 +20,8 @@ def _train(num, line, dest, next_stop, late, **kw) -> Train:
             "currentstop": kw.get("current", "A"),
             "nextstop": next_stop,
             "late": late,
-            "lat": "0",
-            "lon": "0",
+            "lat": lat,
+            "lon": lon,
             "service": "LOCAL",
             "SOURCE": "S",
         }
@@ -156,6 +156,96 @@ async def test_disruptions_endpoint_end_to_end():
     assert data["lines"][0]["bottlenecks"][0]["next_stop"] == "Strafford"
     assert data["lines"][0]["bottlenecks"][0]["direction"] == "outbound"
     assert len(data["lines"][0]["alerts"]) == 1
+
+
+# ---- Direction inference precision (FP/FN fixes) ----
+
+
+def test_direction_through_routed_inbound_leg():
+    """A train south of Center City whose dest is north of CC must still
+    cross CC to get there — it is INBOUND on its current leg, not outbound."""
+    # Train south of Suburban Station, heading to Trenton (north).
+    t = _train("5503", "Trenton", "Trenton", "Cornwells Heights",
+               late=15, lat="39.8500", lon="-75.4500")
+    assert infer_train_direction(t) == "inbound"
+
+
+def test_direction_clear_outbound_same_side_as_dest():
+    """Train already past Center City, between CC and its destination,
+    heading outward — OUTBOUND."""
+    # Train between Suburban (CC) and Paoli, heading to Paoli.
+    t = _train("9501", "Paoli/Thorndale", "Paoli", "Bryn Mawr",
+               late=12, lat="40.0050", lon="-75.2900")
+    assert infer_train_direction(t) == "outbound"
+
+
+def test_direction_destination_in_center_city_always_inbound():
+    """If the destination IS a Center City station, direction is inbound
+    regardless of train position."""
+    t = _train("100", "Paoli/Thorndale", "Suburban Station", "Devon",
+               late=20, lat="40.04", lon="-75.49")
+    assert infer_train_direction(t) == "inbound"
+
+
+def test_direction_unknown_with_blank_destination():
+    t = _train("999", "X", "", "?", 0)
+    assert infer_train_direction(t) == "unknown"
+
+
+def test_direction_falls_back_to_heuristic_without_position():
+    """No usable train coords AND dest not in CC -> assume outbound."""
+    t = _train("9501", "Paoli/Thorndale", "Thorndale", "Devon", late=10)
+    # lat/lon are "0"/"0" → fallback path → outbound
+    assert infer_train_direction(t) == "outbound"
+
+
+# ---- Alert matching precision (FP/FN fixes) ----
+
+
+def test_alert_matches_by_route_id_even_without_line_name_in_text():
+    """FN fix: alerts that only quote the SEPTA code (e.g. 'PAO') should
+    still correlate to the line."""
+    alert = Alert(
+        route_id="PAO",
+        route_name="",
+        mode="Rail",
+        current_message="Single-tracking through next two hours.",
+    )
+    assert _alert_matches_line(alert, "Paoli/Thorndale") is True
+    assert _alert_matches_line(alert, "Warminster") is False
+
+
+def test_alert_does_not_match_on_primary_token_substring():
+    """FP fix: an alert mentioning 'Paoli Pike' (a road) with no PAO route_id
+    must NOT be attached to the Paoli/Thorndale line."""
+    alert = Alert(
+        route_id="125",
+        route_name="Route 125",
+        mode="Bus",
+        current_message="Detour around Paoli Pike construction zone.",
+    )
+    assert _alert_matches_line(alert, "Paoli/Thorndale") is False
+
+
+def test_alert_matches_on_verbatim_line_name_in_message():
+    alert = Alert(
+        route_id="",
+        route_name="",
+        mode="Rail",
+        current_message="Paoli/Thorndale service operating with 20 min delays.",
+    )
+    assert _alert_matches_line(alert, "Paoli/Thorndale") is True
+    assert _alert_matches_line(alert, "Wilmington/Newark") is False
+
+
+def test_alert_does_not_match_other_modes():
+    alert = Alert(
+        route_id="PAO",
+        route_name="Paoli/Thorndale Line",
+        mode="Trolley",  # wrong mode
+        current_message="PAO single tracking.",
+    )
+    assert _alert_matches_line(alert, "Paoli/Thorndale") is False
 
 
 @respx.mock

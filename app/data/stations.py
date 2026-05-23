@@ -21,9 +21,11 @@ STATIONS: list[Station] = [
     Station(name="North Broad", lat=39.9836, lon=-75.1614, lines=["all"]),
     # Major suburban hubs / line termini
     Station(name="Wilmington", lat=39.7385, lon=-75.5510, lines=["Wilmington/Newark"]),
+    Station(name="Newark", lat=39.6837, lon=-75.7607, lines=["Wilmington/Newark"]),
     Station(name="Trenton", lat=40.2196, lon=-74.7563, lines=["Trenton"]),
     Station(name="West Trenton", lat=40.2592, lon=-74.8156, lines=["West Trenton"]),
     Station(name="Paoli", lat=40.0436, lon=-75.4895, lines=["Paoli/Thorndale"]),
+    Station(name="Thorndale", lat=39.9891, lon=-75.7642, lines=["Paoli/Thorndale"]),
     Station(name="Wayne", lat=40.0432, lon=-75.3886, lines=["Paoli/Thorndale"]),
     Station(name="Bryn Mawr", lat=40.0207, lon=-75.3147, lines=["Paoli/Thorndale"]),
     Station(name="Ardmore", lat=40.0034, lon=-75.2897, lines=["Paoli/Thorndale"]),
@@ -31,11 +33,16 @@ STATIONS: list[Station] = [
             lines=["Manayunk/Norristown"]),
     Station(name="Doylestown", lat=40.3097, lon=-75.1290, lines=["Lansdale/Doylestown"]),
     Station(name="Lansdale", lat=40.2410, lon=-75.2845, lines=["Lansdale/Doylestown"]),
-    Station(name="Glenside", lat=40.1006, lon=-75.1525, lines=["Lansdale/Doylestown", "Warminster", "West Trenton"]),
+    Station(name="Glenside", lat=40.1006, lon=-75.1525,
+            lines=["Lansdale/Doylestown", "Warminster", "West Trenton"]),
     Station(name="Warminster", lat=40.2071, lon=-75.0995, lines=["Warminster"]),
     Station(name="Chestnut Hill East", lat=40.0728, lon=-75.2061, lines=["Chestnut Hill East"]),
     Station(name="Chestnut Hill West", lat=40.0742, lon=-75.2105, lines=["Chestnut Hill West"]),
     Station(name="Fox Chase", lat=40.0779, lon=-75.0826, lines=["Fox Chase"]),
+    Station(name="Media", lat=39.9171, lon=-75.3878, lines=["Media/Wawa"]),
+    Station(name="Wawa", lat=39.8859, lon=-75.4537, lines=["Media/Wawa"]),
+    Station(name="Airport Terminal A", lat=39.8734, lon=-75.2413, lines=["Airport"]),
+    Station(name="Cynwyd", lat=40.0054, lon=-75.2307, lines=["Cynwyd"]),
 ]
 
 
@@ -53,6 +60,24 @@ def search_stations(query: str) -> list[Station]:
     if not q:
         return list(STATIONS)
     return [s for s in STATIONS if q in s.name.lower()]
+
+
+def station_by_name(name: str) -> Station | None:
+    """Look up a station by free-form name (case-insensitive, fuzzy)."""
+    if not name:
+        return None
+    n = name.strip().lower()
+    if not n:
+        return None
+    for s in STATIONS:
+        if s.name.lower() == n:
+            return s
+    # tolerate variants like "30th Street" vs "30th Street Station"
+    for s in STATIONS:
+        sn = s.name.lower()
+        if n in sn or sn in n:
+            return s
+    return None
 
 
 def nearest_stations(lat: float, lon: float, limit: int = 3) -> list[Station]:
