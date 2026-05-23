@@ -1,0 +1,38 @@
+<h2 class="font-semibold text-orange-300">Line Disruptions</h2>
+{% if report %}
+  <div class="text-xs text-slate-400 mt-1">
+    {{ report.total_stuck }}/{{ report.total_trains }} trains delayed
+    {{ report.threshold_minutes }}+ min
+  </div>
+  {% if report.lines %}
+    <div class="mt-3 space-y-3">
+      {% for line in report.lines[:6] %}
+        <div class="pb-2 border-b border-slate-800 last:border-b-0">
+          <div class="flex justify-between items-baseline text-xs">
+            <span class="font-semibold text-orange-200">{{ line.line }}</span>
+            <span class="text-slate-400">
+              {{ line.stuck_count }} stuck · max {{ line.max_late_minutes }}m
+              · in {{ line.inbound_stuck }} / out {{ line.outbound_stuck }}
+            </span>
+          </div>
+          {% for b in line.bottlenecks[:3] %}
+            <div class="text-xs text-slate-300 mt-1">
+              {{ b.train_count }} {{ b.direction }} before
+              <span class="text-slate-100">{{ b.next_stop }}</span>
+              <span class="text-slate-500">({{ b.max_late_minutes }}m late)</span>
+            </div>
+          {% endfor %}
+          {% for a in line.alerts[:2] %}
+            <div class="text-xs text-amber-300 mt-1 italic">
+              {{ a.current_message or a.advisory_message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="mt-3 text-sm text-slate-500">No significant line disruptions</div>
+  {% endif %}
+{% else %}
+  <div class="mt-3 text-sm text-slate-500">{{ error or "Loading…" }}</div>
+{% endif %}

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app.data.rail_lines import line_from_route_id
+from app.data.rail_lines import aliases_for_line, line_from_route_id
 from app.data.stations import station_by_name
 from app.models import (
     CENTER_CITY_STATIONS,
@@ -106,7 +106,14 @@ def _alert_matches_line(alert: Alert, line: str) -> bool:
         (alert.current_message or "").lower(),
         (alert.advisory_message or "").lower(),
     )
-    return any(line_l in h for h in haystacks)
+    if any(line_l in h for h in haystacks):
+        return True
+
+    # Common short names / legacy names per line.
+    for alias in aliases_for_line(line):
+        if any(alias in h for h in haystacks):
+            return True
+    return False
 
 
 def build_disruption_report(

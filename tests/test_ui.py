@@ -90,3 +90,39 @@ async def test_ui_all_returns_cards_fragment():
     assert r.status_code == 200
     assert 'hx-get="/ui/weather"' in r.text
     assert 'hx-get="/ui/alerts"' in r.text
+    assert 'hx-get="/ui/disruptions"' in r.text
+
+
+@respx.mock
+async def test_disruptions_card_renders_rollup():
+    respx.get("https://www3.septa.org/api/TrainView/index.php").mock(
+        return_value=Response(
+            200,
+            json=[
+                {"trainno": "9501", "line": "Paoli/Thorndale", "dest": "Thorndale",
+                 "currentstop": "Devon", "nextstop": "Strafford", "late": 28,
+                 "lat": "40.05", "lon": "-75.40", "service": "L", "SOURCE": "S"},
+                {"trainno": "9503", "line": "Paoli/Thorndale", "dest": "Thorndale",
+                 "currentstop": "Devon", "nextstop": "Strafford", "late": 22,
+                 "lat": "40.05", "lon": "-75.40", "service": "L", "SOURCE": "S"},
+            ],
+        )
+    )
+    respx.get("https://www3.septa.org/api/Alerts/index.php").mock(
+        return_value=Response(
+            200,
+            json=[
+                {"route_id": "PAO", "route_name": "Paoli/Thorndale",
+                 "mode": "Rail",
+                 "current_message": "Single-tracking near Strafford.",
+                 "advisory_message": "",
+                 "last_updated": "2026-05-23 17:00:00"},
+            ],
+        )
+    )
+    async with _client() as c:
+        r = await c.get("/ui/disruptions")
+    assert r.status_code == 200
+    assert "Paoli/Thorndale" in r.text
+    assert "before" in r.text and "Strafford" in r.text
+    assert "Single-tracking near Strafford" in r.text

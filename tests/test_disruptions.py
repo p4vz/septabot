@@ -238,6 +238,48 @@ def test_alert_matches_on_verbatim_line_name_in_message():
     assert _alert_matches_line(alert, "Wilmington/Newark") is False
 
 
+def test_alert_matches_via_alias_paoli_line():
+    """FN fix: 'Paoli Line' (without /Thorndale) is the common short name and
+    must still attach to Paoli/Thorndale."""
+    alert = Alert(
+        route_id="",
+        route_name="",
+        mode="Rail",
+        current_message="Paoli Line single-tracking near Strafford until 7 PM.",
+    )
+    assert _alert_matches_line(alert, "Paoli/Thorndale") is True
+    # Doesn't bleed onto unrelated lines
+    assert _alert_matches_line(alert, "Wilmington/Newark") is False
+    assert _alert_matches_line(alert, "Warminster") is False
+
+
+def test_alert_matches_via_alias_other_lines():
+    cases = [
+        ("Wilmington Line residual delays.", "Wilmington/Newark"),
+        ("Lansdale Line operating with 15 min delays.", "Lansdale/Doylestown"),
+        ("Doylestown Line train annulled.", "Lansdale/Doylestown"),
+        ("Media Line shuttle bus replacing rail.", "Media/Wawa"),
+        # Legacy name still in some alerts
+        ("Media/Elwyn service detour.", "Media/Wawa"),
+    ]
+    for message, line in cases:
+        alert = Alert(route_id="", route_name="", mode="Rail", current_message=message)
+        assert _alert_matches_line(alert, line) is True, f"{line!r} should match {message!r}"
+
+
+def test_alert_alias_does_not_match_bare_city_name():
+    """'Wilmington' alone (without 'Line') must not trigger the alias — it
+    could be talking about the city, not the line."""
+    alert = Alert(
+        route_id="",
+        route_name="",
+        mode="Rail",
+        current_message="Service detour near Wilmington station area only.",
+    )
+    # No "Wilmington Line" phrase, no WIL route_id, no verbatim line name.
+    assert _alert_matches_line(alert, "Wilmington/Newark") is False
+
+
 def test_alert_does_not_match_other_modes():
     alert = Alert(
         route_id="PAO",

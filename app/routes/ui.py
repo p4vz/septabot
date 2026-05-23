@@ -9,6 +9,7 @@ from app.clients import septa as septa_client
 from app.clients import traffic as traffic_client
 from app.clients import weather as weather_client
 from app.config import settings
+from app.inference import build_disruption_report
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 
@@ -75,6 +76,24 @@ async def detours_card(request: Request):
     except Exception as e:
         ctx["error"] = f"detours unavailable ({type(e).__name__})"
     return TEMPLATES.TemplateResponse(request, "_detours.html", ctx)
+
+
+@router.get("/disruptions")
+async def disruptions_card(request: Request, min_late: int = 10):
+    ctx: dict = {"report": None, "error": None}
+    try:
+        trains = await cache.get_or_set(
+            "septa:trains", settings.cache_ttl_trains, septa_client.fetch_trains
+        )
+        alerts = await cache.get_or_set(
+            "septa:alerts", settings.cache_ttl_alerts, septa_client.fetch_alerts
+        )
+        ctx["report"] = build_disruption_report(
+            trains, alerts, threshold_minutes=min_late
+        )
+    except Exception as e:
+        ctx["error"] = f"disruptions unavailable ({type(e).__name__})"
+    return TEMPLATES.TemplateResponse(request, "_disruptions.html", ctx)
 
 
 @router.get("/traffic")
