@@ -2,11 +2,11 @@
   <div class="space-y-1">
     {% for a in alerts %}
       <details class="border-b border-slate-800 last:border-b-0 py-1.5">
-        <summary class="cursor-pointer flex items-baseline justify-between gap-2">
+        <summary class="cursor-pointer flex items-baseline justify-between gap-2 min-w-0">
           <span class="text-xs font-semibold text-amber-200 shrink-0">{{ a.route_id }} · {{ a.mode }}</span>
-          <span class="text-xs text-slate-300 truncate">{{ a.current_message or a.advisory_message or "(no message)" }}</span>
+          <span class="text-xs text-slate-300 truncate min-w-0 flex-1 text-right">{{ a.current_message or a.advisory_message or "(no message)" }}</span>
         </summary>
-        <div class="mt-1.5 text-xs space-y-1">
+        <div class="mt-1.5 text-xs space-y-1 break-words">
           {% if a.route_name %}
             <div class="text-slate-400">{{ a.route_name }}</div>
           {% endif %}

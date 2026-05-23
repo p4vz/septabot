@@ -1,10 +1,10 @@
 {% if weather and weather.current %}
   {% set c = weather.current %}
-  <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-    <div class="text-lg font-semibold text-slate-100">
+  <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
+    <div class="text-lg font-semibold text-slate-100 break-words">
       Now {{ c.temperature }}°{{ c.temperature_unit }} · {{ c.short_forecast }}
     </div>
-    <div class="text-xs text-slate-400">
+    <div class="text-xs text-slate-400 break-words">
       wind {{ c.wind }}{% if c.precipitation_probability %} · {{ c.precipitation_probability }}% precip{% endif %}
       {% if weather.location.city %} · {{ weather.location.city }}, {{ weather.location.state }}{% endif %}
     </div>

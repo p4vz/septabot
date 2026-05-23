@@ -8,3 +8,9 @@ summary::-webkit-details-marker { display: none; }
 /* Rotate the chevron when the <details> is open. */
 .chev { display: inline-block; transition: transform 0.15s ease; }
 details[open] > summary .chev { transform: rotate(180deg); }
+
+/* Keep every card constrained to its grid column. Long unbreakable strings
+   (URLs in alert text, long station/route names, etc.) must wrap inside
+   instead of forcing the card — and the page — to grow horizontally. */
+.card { min-width: 0; overflow-wrap: anywhere; }
+.card summary, .card > div { min-width: 0; }
