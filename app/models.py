@@ -39,6 +39,56 @@ class BusDetour(BaseModel):
     current_message: str = ""
 
 
+class Arrival(BaseModel):
+    """A single train arrival/departure at a specific station."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    direction: str = ""
+    line: str = ""
+    train_id: str = ""
+    origin: str = ""
+    destination: str = ""
+    status: str = ""
+    service_type: str = Field(validation_alias="service_type", default="")
+    next_station: str = ""
+    sched_time: Optional[str] = None
+    depart_time: Optional[str] = None
+    track: str = ""
+    platform: str = ""
+
+
+class StationArrivals(BaseModel):
+    station: str
+    northbound: list[Arrival] = Field(default_factory=list)
+    southbound: list[Arrival] = Field(default_factory=list)
+
+
+class NextToArriveOption(BaseModel):
+    """Origin → destination train pairing. May be direct or include a transfer."""
+
+    orig_train: str = ""
+    orig_line: str = ""
+    orig_departure_time: str = ""
+    orig_arrival_time: str = ""
+    orig_delay: str = ""
+    is_direct: bool = True
+    connection_station: Optional[str] = None
+    term_train: Optional[str] = None
+    term_line: Optional[str] = None
+    term_departure_time: Optional[str] = None
+    term_arrival_time: Optional[str] = None
+    term_delay: Optional[str] = None
+
+
+class Station(BaseModel):
+    name: str
+    lat: float
+    lon: float
+    lines: list[str] = Field(default_factory=list)
+    distance_miles: Optional[float] = None
+
+
 class WeatherPeriod(BaseModel):
     name: str
     start_time: datetime

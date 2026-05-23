@@ -1,11 +1,19 @@
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from app.cache import cache
 from app.clients import septa as septa_client
 from app.config import settings
-from app.models import Alert, BusDetour, Train
+from app.data.stations import nearest_stations, search_stations
+from app.models import (
+    Alert,
+    BusDetour,
+    NextToArriveOption,
+    Station,
+    StationArrivals,
+    Train,
+)
 
 router = APIRouter(prefix="/septa", tags=["septa"])
 
@@ -50,3 +58,44 @@ async def get_bus_detours(route: Optional[str] = Query(default=None)):
     if route:
         detours = [d for d in detours if d.route_id == route]
     return detours
+
+
+@router.get("/arrivals", response_model=StationArrivals)
+async def get_arrivals(
+    station: str = Query(..., description="Station name, e.g. 'Suburban Station'"),
+    results: int = Query(default=10, ge=1, le=20),
+):
+    return await cache.get_or_set(
+        f"septa:arrivals:{station.lower()}:{results}",
+        settings.cache_ttl_trains,
+        lambda: septa_client.fetch_arrivals(station, results),
+    )
+
+
+@router.get("/next-to-arrive", response_model=list[NextToArriveOption])
+async def get_next_to_arrive(
+    origin: str = Query(..., description="Origin station, e.g. 'Wayne'"),
+    destination: str = Query(..., description="Destination station, e.g. 'Suburban Station'"),
+    results: int = Query(default=5, ge=1, le=20),
+):
+    return await cache.get_or_set(
+        f"septa:nta:{origin.lower()}->{destination.lower()}:{results}",
+        settings.cache_ttl_trains,
+        lambda: septa_client.fetch_next_to_arrive(origin, destination, results),
+    )
+
+
+@router.get("/stations", response_model=list[Station])
+async def get_stations(
+    search: Optional[str] = Query(default=None, description="Substring match on station name"),
+    lat: Optional[float] = Query(default=None, description="Latitude for nearest-station lookup"),
+    lon: Optional[float] = Query(default=None, description="Longitude for nearest-station lookup"),
+    limit: int = Query(default=3, ge=1, le=20),
+):
+    if (lat is None) != (lon is None):
+        raise HTTPException(status_code=400, detail="lat and lon must be provided together")
+    if lat is not None and lon is not None:
+        return nearest_stations(lat, lon, limit)
+    if search:
+        return search_stations(search)
+    return search_stations("")
