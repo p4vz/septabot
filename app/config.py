@@ -40,5 +40,10 @@ class Settings(BaseSettings):
     default_origin: str = "Wayne, PA"
     default_destination: str = "Center City Philadelphia"
 
+    # Optional shared secret for the /mcp endpoint. Leave empty when the
+    # consuming agent reaches Septabot over a private network; set it to a
+    # random string if /mcp is exposed on the public URL.
+    mcp_auth_token: str = ""
+
 
 settings = Settings()
