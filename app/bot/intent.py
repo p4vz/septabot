@@ -26,6 +26,21 @@ TRAFFIC_KEYWORDS = (
 
 ALERT_KEYWORDS = ("alert", "outage", "service", "delay", "septa", "disruption", "down")
 
+# Asking about a specific route between A and B — fetch driving + transit
+# from Google so Hermes can recommend one.
+ROUTE_KEYWORDS = (
+    "drive", "driving", "by car", "fastest", "quickest", "best way",
+    "how do i get", "how do i go", "get to", "trip from", " from ",
+    "directions", "route to", "should i drive", "should i take",
+)
+
+# Asking about line-level health — fetch the disruption rollup, which
+# correlates stuck trains with active alerts per line.
+DISRUPTION_KEYWORDS = (
+    "stuck", "stranded", "single track", "bottleneck", "how's the",
+    "how is the", "what's up with", "running late", "behind schedule",
+)
+
 COMMUTE_KEYWORDS = (
     "commute", "ride", "going to", "get to work", "leave", "trip",
     "how is", "how's", "morning", "evening",
@@ -39,14 +54,22 @@ def classify(text: str) -> set[str]:
         tags.add("weather")
     if any(k in t for k in TRAIN_KEYWORDS):
         tags.add("trains")
+        tags.add("disruption")  # train question → also pull line-level rollup
     if any(k in t for k in BUS_KEYWORDS):
         tags.add("bus")
     if any(k in t for k in TRAFFIC_KEYWORDS):
         tags.add("traffic")
     if any(k in t for k in ALERT_KEYWORDS):
         tags.add("alerts")
+        tags.add("disruption")
+    if any(k in t for k in DISRUPTION_KEYWORDS):
+        tags.add("disruption")
+        tags.add("trains")
+    if any(k in t for k in ROUTE_KEYWORDS):
+        tags.add("route")
+        tags.add("traffic")  # routes care about live traffic context
     if any(k in t for k in COMMUTE_KEYWORDS):
-        tags.update({"weather", "trains", "alerts", "traffic"})
+        tags.update({"weather", "trains", "alerts", "traffic", "disruption"})
     if not tags:
         # Default to a lean commute snapshot when intent is unclear.
         tags.update({"weather", "alerts", "trains"})

@@ -209,6 +209,102 @@ async def test_telegram_freeform_calls_hermes_with_filtered_context():
     assert sent[0]["text"].startswith("Yes")
 
 
+@respx.mock
+async def test_telegram_freeform_drive_vs_train_pulls_routes_and_disruption():
+    """A "from X to Y" question should populate both `drive` and `transit`
+    sub-objects in the Hermes prompt, plus a disruption rollup so the bot
+    can warn about active issues."""
+    from app.config import settings as app_settings
+    app_settings.google_maps_api_key = "test-key"
+
+    respx.get("https://www3.septa.org/api/Alerts/get_alert_data.php").mock(
+        return_value=Response(
+            200,
+            json=[
+                {
+                    "route_id": "PAO",
+                    "route_name": "Paoli/Thorndale",
+                    "mode": "Rail",
+                    "current_message": "Single-tracking near Strafford.",
+                    "advisory_message": "",
+                    "last_updated": "2026-05-23 17:00:00",
+                }
+            ],
+        )
+    )
+    respx.get("https://www3.septa.org/api/TrainView/index.php").mock(
+        return_value=Response(
+            200,
+            json=[
+                {"trainno": "532", "line": "Paoli/Thorndale", "dest": "Thorndale",
+                 "currentstop": "Strafford", "nextstop": "Devon", "late": 22,
+                 "lat": "40.04", "lon": "-75.39", "service": "L", "SOURCE": "S"},
+            ],
+        )
+    )
+    respx.get("https://maps.googleapis.com/maps/api/directions/json").mock(
+        return_value=Response(
+            200,
+            json={
+                "status": "OK",
+                "routes": [
+                    {
+                        "summary": "I-76 E",
+                        "warnings": [],
+                        "legs": [
+                            {
+                                "start_address": "Wayne, PA",
+                                "end_address": "Center City, Philadelphia, PA",
+                                "distance": {"value": 30577},
+                                "duration": {"value": 1680},
+                                "duration_in_traffic": {"value": 2520},
+                                "steps": [],
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+    )
+
+    sent: list[dict] = []
+    captured_prompt = {}
+
+    async def fake_send(chat_id, text, parse_mode="Markdown"):
+        sent.append({"chat_id": chat_id, "text": text})
+
+    async def fake_chat(system, user, **kwargs):
+        captured_prompt["system"] = system
+        captured_prompt["user"] = user
+        return "Drive: 42 min with traffic. Train: also good. Paoli line has 1 stuck train near Strafford."
+
+    with (
+        patch("app.bot.handler.telegram.send_message", new=AsyncMock(side_effect=fake_send)),
+        patch("app.bot.handler.hermes.chat", new=AsyncMock(side_effect=fake_chat)),
+    ):
+        async with _client() as c:
+            r = await c.post(
+                "/telegram/webhook",
+                json={
+                    "update_id": 99,
+                    "message": {
+                        "message_id": 99,
+                        "chat": {"id": 11, "type": "private"},
+                        "text": "should I drive or take the train from Wayne to Center City?",
+                    },
+                },
+            )
+
+    assert r.status_code == 200
+    body = captured_prompt["user"]
+    assert '"drive"' in body, "expected drive route in Hermes prompt"
+    assert '"transit"' in body, "expected transit route in Hermes prompt"
+    assert '"disruption"' in body, "expected disruption rollup in Hermes prompt"
+    assert "duration_with_traffic_min" in body
+    assert "Paoli/Thorndale" in body
+    assert sent[0]["text"].startswith("Drive:")
+
+
 async def test_telegram_webhook_secret_enforced(monkeypatch):
     monkeypatch.setattr("app.routes.telegram.settings.telegram_webhook_secret", "shh")
     async with _client() as c:

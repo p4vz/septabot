@@ -11,8 +11,9 @@ import logging
 from typing import Any
 
 from app.bot import context as ctx_builder
-from app.bot import intent
+from app.bot import entities, intent
 from app.clients import hermes, telegram
+from app.config import settings
 
 log = logging.getLogger(__name__)
 
@@ -35,10 +36,18 @@ HELP_TEXT = (
 
 
 SYSTEM_PROMPT = (
-    "You are septabot, a concise assistant for Philadelphia commuters. "
-    "Answer ONLY using the JSON snapshot provided. If the snapshot does not "
-    "contain the answer, say so briefly. Keep replies under 4 short lines. "
-    "Use plain text suitable for Telegram; no Markdown headers."
+    "You are septabot, a concise assistant for Philadelphia commuters.\n"
+    "\n"
+    "Rules:\n"
+    "- Answer ONLY from the JSON snapshot. If the snapshot lacks the answer, "
+    "say so in one sentence and don't invent.\n"
+    "- When the snapshot has BOTH `drive` and `transit`, give a clear "
+    "recommendation (which is faster door-to-door, what the tradeoff is). "
+    "Don't just list numbers. Mention disruptions if they'd change the call.\n"
+    "- When the snapshot has `disruption`, lead with the line's stuck count "
+    "and max delay, then the alert text if present.\n"
+    "- Format: 1-4 short lines, plain Telegram text. No Markdown headers, "
+    "no bullets. Times in minutes (e.g. '42 min'), distances in miles."
 )
 
 
@@ -89,7 +98,18 @@ async def _route(text: str) -> str:
 
     # Free-form -> Hermes with intent-filtered context.
     tags = intent.classify(text)
-    ctx = await ctx_builder.build(tags)
+    route = entities.extract_route(text, default_origin=settings.default_origin)
+    line = entities.extract_line(text)
+    if route and "route" not in tags:
+        # "from X to Y" implies route intent even if no keyword tripped.
+        tags.add("route")
+        tags.add("traffic")
+    ctx = await ctx_builder.build(
+        tags,
+        route_origin=route[0] if route else None,
+        route_destination=route[1] if route else None,
+        line=line,
+    )
     user_prompt = (
         f"User question: {text}\n\n"
         f"Current snapshot (only use this; do not invent data):\n"

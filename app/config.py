@@ -34,5 +34,11 @@ class Settings(BaseSettings):
     # return 502; the rest of the app continues to work.
     google_maps_api_key: str = ""
 
+    # Bot defaults for free-form "should I drive to <X>?" style questions
+    # where the user omits the origin. Set this to your home / typical
+    # starting point; the Telegram bot uses it as the implicit start.
+    default_origin: str = "Wayne, PA"
+    default_destination: str = "Center City Philadelphia"
+
 
 settings = Settings()
