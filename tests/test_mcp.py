@@ -24,6 +24,8 @@ async def test_all_tools_registered():
         "get_train_delays",
         "get_service_alerts",
         "get_bus_detours",
+        "get_vehicle_locations",
+        "get_elevator_outages",
         "get_next_to_arrive",
         "get_weather",
         "get_traffic",

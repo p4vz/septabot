@@ -114,6 +114,59 @@ async def get_bus_detours() -> list[dict]:
 
 
 @mcp.tool()
+async def get_vehicle_locations(route: str, min_late: int = 0) -> list[dict]:
+    """Live positions of every bus/trolley on a route (SEPTA TransitView). Pass
+    the public route like '33', 'K', or '101'. Each vehicle has its direction,
+    destination, next stop, minutes late, and seat availability. Use for 'where
+    is the 33 bus?' or 'is the K trolley running late?'. min_late filters to
+    vehicles at least N minutes behind."""
+    vehicles = await cache.get_or_set(
+        f"septa:vehicles:{route.lower()}",
+        settings.cache_ttl_trains,
+        lambda: septa_client.fetch_vehicles(route),
+    )
+    return [
+        {
+            "vehicle": v.vehicle_id,
+            "route": v.route_id,
+            "direction": v.direction,
+            "destination": v.destination,
+            "next_stop": v.next_stop,
+            "late_min": v.late_minutes,
+            "seats": v.seat_availability,
+            "lat": v.lat,
+            "lon": v.lon,
+        }
+        for v in vehicles
+        if v.late_minutes >= min_late
+    ]
+
+
+@mcp.tool()
+async def get_elevator_outages(station: str = "") -> list[dict]:
+    """Out-of-service SEPTA elevators/escalators (accessibility). Optionally
+    filter by station name substring. Each entry has line, station, the elevator
+    location, and the outage message. Use for wheelchair/stroller/accessibility
+    questions like 'is the elevator at 69th St working?'."""
+    outages = await cache.get_or_set(
+        "septa:elevator-outages",
+        settings.cache_ttl_alerts,
+        septa_client.fetch_elevator_outages,
+    )
+    s = station.lower()
+    return [
+        {
+            "line": o.line,
+            "station": o.station,
+            "elevator": o.elevator,
+            "message": o.message,
+        }
+        for o in outages
+        if not s or s in o.station.lower()
+    ]
+
+
+@mcp.tool()
 async def get_next_to_arrive(origin: str, destination: str) -> list[dict]:
     """Next Regional Rail trains between two SEPTA stations (direct or via one
     transfer). Pass full station names, e.g. origin='Wayne', destination=

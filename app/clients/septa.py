@@ -8,9 +8,11 @@ from app.models import (
     Alert,
     Arrival,
     BusDetour,
+    ElevatorOutage,
     NextToArriveOption,
     StationArrivals,
     Train,
+    Vehicle,
 )
 
 
@@ -204,6 +206,43 @@ async def fetch_next_to_arrive(
                 term_departure_time=raw.get("term_departure_time"),
                 term_arrival_time=raw.get("term_arrival_time"),
                 term_delay=raw.get("term_delay"),
+            )
+        )
+    return out
+
+
+async def fetch_vehicles(route: str) -> list[Vehicle]:
+    """Real-time bus/trolley positions for a single route via TransitView.
+
+    The endpoint returns {"bus": [ {vehicle}, ... ]} regardless of whether the
+    route is a bus or trolley. `route` is the public route number/letter, e.g.
+    '33', 'K', 'G', '101'.
+    """
+    data = await _get_json("/TransitView/index.php", params={"route": route})
+    raw = (data or {}).get("bus") if isinstance(data, dict) else None
+    out: list[Vehicle] = []
+    for v in raw or []:
+        if isinstance(v, dict):
+            v.setdefault("route_id", route)
+            out.append(Vehicle.model_validate(v))
+    return out
+
+
+async def fetch_elevator_outages() -> list[ElevatorOutage]:
+    """All currently out-of-service SEPTA elevators/escalators."""
+    data = await _get_json("/elevator/index.php")
+    results = (data or {}).get("results") if isinstance(data, dict) else None
+    out: list[ElevatorOutage] = []
+    for r in results or []:
+        if not isinstance(r, dict):
+            continue
+        out.append(
+            ElevatorOutage(
+                line=str(r.get("line", "")),
+                station=str(r.get("station", "")),
+                elevator=str(r.get("elevator", "")),
+                message=_strip_html(str(r.get("message") or r.get("message_html") or "")).strip(),
+                alternate_url=str(r.get("alternate_url", "")),
             )
         )
     return out

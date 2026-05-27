@@ -11,10 +11,12 @@ from app.models import (
     Alert,
     BusDetour,
     DisruptionReport,
+    ElevatorOutage,
     NextToArriveOption,
     Station,
     StationArrivals,
     Train,
+    Vehicle,
 )
 
 router = APIRouter(prefix="/septa", tags=["septa"])
@@ -60,6 +62,37 @@ async def get_bus_detours(route: Optional[str] = Query(default=None)):
     if route:
         detours = [d for d in detours if d.route_id == route]
     return detours
+
+
+@router.get("/vehicles", response_model=list[Vehicle])
+async def get_vehicles(
+    route: str = Query(..., description="Route number/letter, e.g. '33', 'K', '101'"),
+    min_late: int = Query(default=0, ge=0, description="Only vehicles at least N minutes late"),
+):
+    """Live bus/trolley positions for a route from TransitView: location, next
+    stop, minutes late, and seat availability."""
+    vehicles = await cache.get_or_set(
+        f"septa:vehicles:{route.lower()}",
+        settings.cache_ttl_trains,
+        lambda: septa_client.fetch_vehicles(route),
+    )
+    if min_late > 0:
+        vehicles = [v for v in vehicles if v.late_minutes >= min_late]
+    return vehicles
+
+
+@router.get("/elevator-outages", response_model=list[ElevatorOutage])
+async def get_elevator_outages(
+    station: Optional[str] = Query(default=None, description="Substring match on station name"),
+):
+    """Out-of-service elevators/escalators across the SEPTA system."""
+    outages = await cache.get_or_set(
+        "septa:elevator-outages", settings.cache_ttl_alerts, septa_client.fetch_elevator_outages
+    )
+    if station:
+        s = station.lower()
+        outages = [o for o in outages if s in o.station.lower()]
+    return outages
 
 
 @router.get("/arrivals", response_model=StationArrivals)

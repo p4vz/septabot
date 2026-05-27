@@ -73,6 +73,35 @@ class BusDetour(BaseModel):
     current_message: str = ""
 
 
+class Vehicle(BaseModel):
+    """A real-time bus or trolley position from the TransitView feed."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    vehicle_id: str = Field(validation_alias="VehicleID", default="")
+    label: str = ""
+    route_id: str = ""
+    direction: str = Field(validation_alias="Direction", default="")
+    destination: str = ""
+    lat: float = 0.0
+    lon: float = Field(validation_alias="lng", default=0.0)
+    heading: float = 0.0
+    late_minutes: int = Field(validation_alias="late", default=0)
+    next_stop: str = Field(validation_alias="next_stop_name", default="")
+    next_stop_id: str = Field(validation_alias="next_stop_id", default="")
+    seat_availability: str = Field(validation_alias="estimated_seat_availability", default="")
+
+
+class ElevatorOutage(BaseModel):
+    """An out-of-service elevator/escalator at a SEPTA station."""
+
+    line: str = ""
+    station: str = ""
+    elevator: str = ""
+    message: str = ""
+    alternate_url: str = ""
+
+
 class Arrival(BaseModel):
     """A single train arrival/departure at a specific station."""
 
