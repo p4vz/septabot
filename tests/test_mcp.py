@@ -20,6 +20,7 @@ async def test_all_tools_registered():
     tools = await mcp_server.mcp.list_tools()
     names = {t.name for t in tools}
     assert names == {
+        "commute_briefing",
         "get_rail_disruptions",
         "get_train_delays",
         "get_service_alerts",

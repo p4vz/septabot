@@ -14,6 +14,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 from app.bot import context as ctx
+from app.bot import entities, intent
 from app.cache import cache
 from app.clients import septa as septa_client
 from app.config import settings
@@ -31,12 +32,17 @@ _security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
 mcp = FastMCP(
     "septabot",
     instructions=(
-        "Live Philadelphia commuting data. Use these tools to answer questions "
-        "about SEPTA Regional Rail status, service alerts, bus detours, weather, "
-        "highway traffic, and door-to-door routing (driving vs. transit). All data "
-        "is real-time and Philadelphia-region only. When a user asks 'should I "
-        "drive or take the train?', call both drive_route and transit_route and "
-        "compare, and check get_rail_disruptions for the relevant line."
+        "Live Philadelphia commuting data for SEPTA, weather, traffic, and "
+        "routing.\n\n"
+        "PREFERRED: For almost any commuter question, call `commute_briefing` "
+        "with the user's raw question. It figures out what's relevant and "
+        "returns ONLY that data (e.g. a rail question gets train + disruption "
+        "data, not weather or driving routes), keeping the response small and "
+        "focused. Answer from what it returns.\n\n"
+        "The other tools are for drilling in when you need one specific thing "
+        "(a single train's schedule, a station board, one bus route's "
+        "vehicles, elevator outages). All data is real-time and "
+        "Philadelphia-region only."
     ),
     stateless_http=True,
     json_response=True,
@@ -44,6 +50,48 @@ mcp = FastMCP(
     streamable_http_path="/",
     transport_security=_security,
 )
+
+
+@mcp.tool()
+async def commute_briefing(query: str) -> dict:
+    """Smart, single-call briefing. Pass the user's raw question and get back
+    ONLY the data relevant to it — nothing extra. This should be your first
+    call for general commute questions.
+
+    It classifies the question and fetches just the matching slices:
+      - weather words ('rain', 'umbrella') -> weather only
+      - a rail line / 'delays' / 'stuck' -> delayed trains + per-line disruption
+        rollup (with the relevant line pre-filtered)
+      - 'bus' / 'detour' -> bus detours
+      - 'traffic' / a highway name -> 511PA incidents
+      - 'drive', 'fastest', or 'from X to Y' -> driving AND transit routes for
+        that trip (extracted from the text), plus live traffic
+    Multiple intents combine (e.g. a 'should I drive or take the train from
+    Wayne to Center City' question returns drive, transit, and disruption).
+
+    The returned object includes an `_included` list naming which data sections
+    are present and a `_route` echo of any origin/destination parsed from the
+    question. If a section the user asked about is missing, the underlying feed
+    was empty or unavailable — say so rather than inventing data."""
+    tags = intent.classify(query)
+    route = entities.extract_route(query, default_origin=settings.default_origin)
+    line = entities.extract_line(query)
+    if route and "route" not in tags:
+        tags.add("route")
+        tags.add("traffic")
+
+    data = await ctx.build(
+        tags,
+        route_origin=route[0] if route else None,
+        route_destination=route[1] if route else None,
+        line=line,
+    )
+    data["_included"] = sorted(k for k in data if not k.startswith("_") and k != "as_of")
+    if route:
+        data["_route"] = {"origin": route[0], "destination": route[1]}
+    if line:
+        data["_line"] = line
+    return data
 
 
 @mcp.tool()
