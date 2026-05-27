@@ -12,6 +12,7 @@ from app.models import (
     NextToArriveOption,
     StationArrivals,
     Train,
+    TrainScheduleStop,
     Vehicle,
 )
 
@@ -208,6 +209,18 @@ async def fetch_next_to_arrive(
                 term_delay=raw.get("term_delay"),
             )
         )
+    return out
+
+
+async def fetch_train_schedule(train_number: str) -> list[TrainScheduleStop]:
+    """Full stop list for a specific train run with scheduled / estimated /
+    actual times (RRSchedules endpoint). `train_number` is the train id, e.g.
+    '532'."""
+    data = await _get_json("/RRSchedules/index.php", params={"req1": train_number})
+    out: list[TrainScheduleStop] = []
+    for raw in data or []:
+        if isinstance(raw, dict):
+            out.append(TrainScheduleStop.model_validate(raw))
     return out
 
 

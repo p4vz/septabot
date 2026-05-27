@@ -16,6 +16,7 @@ from app.models import (
     Station,
     StationArrivals,
     Train,
+    TrainScheduleStop,
     Vehicle,
 )
 
@@ -117,6 +118,19 @@ async def get_next_to_arrive(
         f"septa:nta:{origin.lower()}->{destination.lower()}:{results}",
         settings.cache_ttl_trains,
         lambda: septa_client.fetch_next_to_arrive(origin, destination, results),
+    )
+
+
+@router.get("/schedule", response_model=list[TrainScheduleStop])
+async def get_train_schedule(
+    train: str = Query(..., description="Train number, e.g. '532'"),
+):
+    """Full stop list for a specific train run with scheduled, estimated, and
+    actual times (RRSchedules)."""
+    return await cache.get_or_set(
+        f"septa:schedule:{train}",
+        settings.cache_ttl_trains,
+        lambda: septa_client.fetch_train_schedule(train),
     )
 
 

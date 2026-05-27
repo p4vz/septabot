@@ -102,6 +102,17 @@ class ElevatorOutage(BaseModel):
     alternate_url: str = ""
 
 
+class TrainScheduleStop(BaseModel):
+    """One stop in a specific train's run (from the RRSchedules endpoint)."""
+
+    station: str = ""
+    scheduled_time: str = Field(validation_alias="sched_tm", default="")
+    estimated_time: str = Field(validation_alias="est_tm", default="")
+    actual_time: Optional[str] = Field(validation_alias="act_tm", default=None)
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+
 class Arrival(BaseModel):
     """A single train arrival/departure at a specific station."""
 

@@ -176,6 +176,33 @@ async def get_next_to_arrive(origin: str, destination: str) -> list[dict]:
 
 
 @mcp.tool()
+async def get_station_arrivals(station: str, results: int = 10) -> dict:
+    """The 'Big Board' for a SEPTA Regional Rail station: inbound and outbound
+    trains due soon, each with line, destination, status (on time / N min late),
+    and scheduled time. Pass a full station name like 'Suburban Station' or
+    '30th Street Station'. Use for 'what's leaving Suburban Station soon?'."""
+    arr = await cache.get_or_set(
+        f"septa:arrivals:{station.lower()}:{results}",
+        settings.cache_ttl_trains,
+        lambda: septa_client.fetch_arrivals(station, results),
+    )
+    return arr.model_dump(exclude_none=True)
+
+
+@mcp.tool()
+async def get_train_schedule(train_number: str) -> list[dict]:
+    """The full stop list for a specific train run with scheduled, estimated,
+    and actual times. Pass the train number (e.g. '532'). Use to answer 'what
+    stops does train 532 make and when?' or to check a train's progress."""
+    stops = await cache.get_or_set(
+        f"septa:schedule:{train_number}",
+        settings.cache_ttl_trains,
+        lambda: septa_client.fetch_train_schedule(train_number),
+    )
+    return [s.model_dump(exclude_none=True) for s in stops]
+
+
+@mcp.tool()
 async def get_weather() -> Optional[dict]:
     """Current Philadelphia weather and short forecast from the National Weather
     Service: temperature, conditions, wind, precipitation chance, plus the next

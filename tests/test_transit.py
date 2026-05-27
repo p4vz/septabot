@@ -134,3 +134,48 @@ async def test_new_mcp_tools_registered():
     tools = {t.name for t in await mcp_server.mcp.list_tools()}
     assert "get_vehicle_locations" in tools
     assert "get_elevator_outages" in tools
+    assert "get_train_schedule" in tools
+    assert "get_station_arrivals" in tools
+
+
+_SCHEDULE = [
+    {"station": "Paoli", "sched_tm": "5:13 pm", "est_tm": "5:13 pm", "act_tm": None},
+    {"station": "Ardmore", "sched_tm": "5:31 pm", "est_tm": "5:33 pm", "act_tm": "5:34 pm"},
+    {"station": "Suburban Station", "sched_tm": "5:53 pm", "est_tm": "5:55 pm", "act_tm": None},
+]
+
+
+@respx.mock
+async def test_fetch_train_schedule_parses_rrschedules():
+    respx.get("https://www3.septa.org/api/RRSchedules/index.php").mock(
+        return_value=Response(200, json=_SCHEDULE)
+    )
+    stops = await septa_client.fetch_train_schedule("532")
+    assert len(stops) == 3
+    assert stops[0].station == "Paoli"
+    assert stops[0].scheduled_time == "5:13 pm"
+    assert stops[1].actual_time == "5:34 pm"
+    assert stops[2].actual_time is None
+
+
+@respx.mock
+async def test_schedule_endpoint():
+    respx.get("https://www3.septa.org/api/RRSchedules/index.php").mock(
+        return_value=Response(200, json=_SCHEDULE)
+    )
+    async with _client() as c:
+        r = await c.get("/septa/schedule", params={"train": "532"})
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 3
+    assert data[0]["station"] == "Paoli"
+
+
+@respx.mock
+async def test_mcp_train_schedule_tool():
+    respx.get("https://www3.septa.org/api/RRSchedules/index.php").mock(
+        return_value=Response(200, json=_SCHEDULE)
+    )
+    result = await mcp_server.get_train_schedule("532")
+    assert len(result) == 3
+    assert result[1]["estimated_time"] == "5:33 pm"
